@@ -39,19 +39,15 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         lp.height = item.getHeight();
         holder.itemView.setLayoutParams(lp);
 
+        holder.itemView.setTag(position);
         // 把每个图片视图设置不同的Transition名称, 防止在一个视图内有多个相同的名称, 在变换的时候造成混乱
         // Fragment支持多个View进行变换, 使用适配器时, 需要加以区分
         ViewCompat.setTransitionName(holder.imageView, holder.itemView.getResources().getString(item.getAuthor()));
+        //ViewCompat.setTransitionName(holder.imageView, holder.itemView.getResources().getString(R.string.image_transition));
         Log.i("way", "item = " + item);
         //Glide.with(holder.imageView.getContext()).load(item.getPhoto()).into(holder.imageView);
         holder.imageView.setImageResource(item.getPhoto());
 
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mListener.onClick(holder, position);
-            }
-        });
     }
 
     @Override
@@ -59,18 +55,23 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         return Item.ITEMS.length;
     }
 
-    public class MyViewHolder extends RecyclerView.ViewHolder {
+    public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
         public ImageView imageView;
 
         public MyViewHolder(View itemView) {
             super(itemView);
+            itemView.setOnClickListener(this);
             imageView = (ImageView) itemView.findViewById(R.id.imageView);
+        }
 
+        @Override
+        public void onClick(View v) {
+            mListener.onClick(v);
         }
     }
 
     public interface OnItemClickListener {
-        void onClick(MyViewHolder holder, int position);
+        void onClick(View view);
     }
 
 }

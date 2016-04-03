@@ -1,10 +1,10 @@
 package com.way.recycleview.fragment;
 
-import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.util.Pair;
@@ -20,9 +20,9 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 
 import com.way.recycleview.R;
-import com.way.recycleview.activity.DetailActivity;
 import com.way.recycleview.adapter.MyAdapter;
 import com.way.recycleview.model.DetailTransition;
 
@@ -33,6 +33,7 @@ import butterknife.ButterKnife;
  * Created by way on 16/4/1.
  */
 public class RecyclerFragment extends Fragment implements MyAdapter.OnItemClickListener{
+    private static final String STAGGERED_KEY = "STAGGERED_LAYOUT_MANAGER_KEY";
     private MyAdapter mAdapter;
     @Bind(R.id.recycler_view)
     RecyclerView mRecyclerView;
@@ -95,9 +96,13 @@ public class RecyclerFragment extends Fragment implements MyAdapter.OnItemClickL
         initItemAnimator(recyclerView); // 初始化动画效果
     }
     private void initRecyclerLayoutManager(RecyclerView recyclerView) {
-        // 错列网格布局
-        recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2,
-                StaggeredGridLayoutManager.VERTICAL));
+        boolean isStaggered = PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean(STAGGERED_KEY, true);
+        if (isStaggered)
+            // 错列网格布局
+            recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2,
+                    StaggeredGridLayoutManager.VERTICAL));
+        else
+            recyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
     }
     private void initRecyclerAdapter(RecyclerView recyclerView) {
         mAdapter = new MyAdapter(this);
@@ -119,9 +124,20 @@ public class RecyclerFragment extends Fragment implements MyAdapter.OnItemClickL
     private void initItemAnimator(RecyclerView recyclerView) {
         recyclerView.setItemAnimator(new DefaultItemAnimator()); // 默认动画
     }
+    private boolean mIsDetailsActivityStarted;
 
     @Override
-    public void onClick(MyAdapter.MyViewHolder holder, int position) {
+    public void onResume() {
+        super.onResume();
+        mIsDetailsActivityStarted = false;
+    }
+
+    @Override
+    public void onClick(View view) {
+        if(mIsDetailsActivityStarted)
+            return;
+        mIsDetailsActivityStarted = true;
+        int position = (int) view.getTag();
         DetailFragment detailFragment = DetailFragment.newInstance(position);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             detailFragment.setSharedElementEnterTransition(new DetailTransition());
@@ -129,9 +145,9 @@ public class RecyclerFragment extends Fragment implements MyAdapter.OnItemClickL
             detailFragment.setEnterTransition(new Fade());
             detailFragment.setSharedElementReturnTransition(new DetailTransition());
         }
-
+        ImageView imageView = (ImageView) view.findViewById(R.id.imageView);
         getActivity().getSupportFragmentManager().beginTransaction()
-                .addSharedElement(holder.imageView, getResources().getString(R.string.image_transition))
+                .addSharedElement(imageView, getResources().getString(R.string.image_transition))
                 .replace(R.id.fragment_container, detailFragment)
                 .addToBackStack(null)
                 .commit();
@@ -159,14 +175,15 @@ public class RecyclerFragment extends Fragment implements MyAdapter.OnItemClickL
     }
 
     public void changeLayoutManager() {
-        RecyclerView.LayoutManager layoutManager =  mRecyclerView.getLayoutManager();
-        if(layoutManager instanceof  StaggeredGridLayoutManager) {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getContext());
+        boolean isStaggered = sharedPreferences.getBoolean(STAGGERED_KEY, true);
+        if(isStaggered) {
             mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
         }else{
             mRecyclerView.setLayoutManager(new StaggeredGridLayoutManager(2,
                     StaggeredGridLayoutManager.VERTICAL));
         }
-        //mAdapter.notifyDataSetChanged();
+        sharedPreferences.edit().putBoolean(STAGGERED_KEY, !isStaggered).apply();
         Log.i("way", "changeLayoutManager...");
     }
 }
